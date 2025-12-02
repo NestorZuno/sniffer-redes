@@ -1,23 +1,23 @@
-from PyQt6.QtWidgets import QWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem
 
 class PacketDetails(QWidget):
     def __init__(self):
         super().__init__()
 
-        layout = QVBoxLayout(self)
-        self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Campo", "Valor"])
+        layout = QVBoxLayout()
+        self.table = QTableWidget(0, 2)
+        self.table.setHorizontalHeaderLabels(["Campo", "Valor"])
 
-        layout.addWidget(self.tree)
+        layout.addWidget(self.table)
+        self.setLayout(layout)
 
-    def display(self, layers: list):
-        self.tree.clear()
+    def show_packet(self, packet_dict):
+        self.table.setRowCount(0)
 
-        for layer in layers:
-            layer_item = QTreeWidgetItem([layer["layer"]])
-            self.tree.addTopLevelItem(layer_item)
+        for key, value in packet_dict.items():
+            row = self.table.rowCount()
+            self.table.insertRow(row)
 
-            for field, value in layer["fields"].items():
-                QTreeWidgetItem(layer_item, [field, str(value)])
+            self.table.setItem(row, 0, QTableWidgetItem(str(key)))
+            self.table.setItem(row, 1, QTableWidgetItem(str(value)))
 
-        self.tree.expandAll()

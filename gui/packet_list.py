@@ -1,36 +1,44 @@
-from PyQt6.QtWidgets import QWidget, QTableWidget, QVBoxLayout, QTableWidgetItem
+from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import pyqtSignal, Qt
 
-class PacketList(QWidget):
-
-    packet_selected = pyqtSignal(dict)  # Envía un paquete al main_window
+class PacketList(QTableWidget):
+    # Señal que enviará el paquete seleccionado
+    packet_selected = pyqtSignal(dict)
 
     def __init__(self):
-        super().__init__()
+        super().__init__(0, 7)
+        self.setHorizontalHeaderLabels(
+            ["#", "Time", "Source", "Destination", "Protocol", "Size", "Info"]
+        )
 
-        layout = QVBoxLayout(self)
-        self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["#", "Tiempo", "Origen", "Destino", "Protocolo"])
+        # Cuando el usuario haga click en una fila → ejecutar row_clicked
+        self.cellClicked.connect(self.row_clicked)
 
-        self.table.cellClicked.connect(self._row_clicked)
+    def add_packet(self, num, time, src, dst, proto, size, info):
+        row = self.rowCount()
+        self.insertRow(row)
 
-        layout.addWidget(self.table)
+        data = [num, time, src, dst, proto, size, info]
 
-        # Listado interno de paquetes
-        self.packets = []
+        for col, value in enumerate(data):
+            item = QTableWidgetItem(str(value))
+            self.setItem(row, col, item)
 
-    def add_packet(self, packet: dict):
-        row = self.table.rowCount()
-        self.table.insertRow(row)
+        # Guardamos el diccionario dentro del primer item de la fila
+        self.setRowData(row, {
+            "num": num,
+            "time": time,
+            "src": src,
+            "dst": dst,
+            "proto": proto,
+            "size": size,
+            "info": info
+        })
 
-        self.packets.append(packet)
+    def setRowData(self, row, data):
+        self.item(row, 0).setData(Qt.ItemDataRole.UserRole, data)
 
-        self.table.setItem(row, 0, QTableWidgetItem(str(len(self.packets))))
-        self.table.setItem(row, 1, QTableWidgetItem(packet.get("time", "0")))
-        self.table.setItem(row, 2, QTableWidgetItem(packet.get("src", "")))
-        self.table.setItem(row, 3, QTableWidgetItem(packet.get("dst", "")))
-        self.table.setItem(row, 4, QTableWidgetItem(packet.get("protocol", "")))
-
-    def _row_clicked(self, row, col):
-        packet = self.packets[row]
-        self.packet_selected.emit(packet)
+    def row_clicked(self, row, col):
+        data = self.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        if data:
+            self.packet_selected.emit(data)

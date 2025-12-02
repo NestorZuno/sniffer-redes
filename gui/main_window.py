@@ -6,10 +6,19 @@ from PyQt6.QtGui import QAction, QIcon
 
 from gui.packet_list import PacketList
 from gui.packet_details import PacketDetails
+from capture.simulator import PacketSimulator
+from PyQt6.QtCore import QTimer
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.simulator = PacketSimulator()
+
+        # Timer que generará paquetes cada cierto tiempo
+        self.capture_timer = QTimer()
+        self.capture_timer.timeout.connect(self.generate_simulated_packet)
+
 
         self.setWindowTitle("Sniffer de Red - Proyecto Escolar")
         self.resize(1000, 600)
@@ -26,6 +35,8 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self.packet_list, 3)
         layout.addWidget(self.packet_details, 2)
+
+        self.packet_list.packet_selected.connect(self.packet_details.show_packet)
 
         container.setLayout(layout)
         self.setCentralWidget(container)
@@ -81,3 +92,21 @@ class MainWindow(QMainWindow):
 
     def show_stats(self):
         QMessageBox.information(self, "Estadísticas", "Vista de estadísticas (por implementar).")
+
+    def generate_simulated_packet(self):
+        pkt = self.simulator.generate_packet()
+
+        self.packet_list.add_packet(
+            pkt["num"], pkt["time"], pkt["src"], pkt["dst"],
+            pkt["proto"], pkt["size"], pkt["info"]
+        )
+
+    def start_capture(self):
+        self.simulator.start()
+        self.capture_timer.start(300)
+
+    def stop_capture(self):
+        self.simulator.stop()
+        self.capture_timer.stop()
+
+
