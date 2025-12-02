@@ -1,113 +1,83 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QFileDialog, QMessageBox
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QFileDialog, QMessageBox
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QIcon
 
 from gui.packet_list import PacketList
 from gui.packet_details import PacketDetails
-from gui.hex_viewer import HexViewer
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Sniffer de Redes - Proyecto")
-        self.resize(1200, 700)
+        self.setWindowTitle("Sniffer de Red - Proyecto Escolar")
+        self.resize(1000, 600)
 
-        self._setup_menu()
-        self._setup_layout()
+        # ===== MENU =====
+        self.create_menu()
 
-    def _setup_menu(self):
-        menu = self.menuBar()
+        # ===== UI PRINCIPAL =====
+        container = QWidget()
+        layout = QHBoxLayout()
 
-        # --- FILE MENU ---
-        file_menu = menu.addMenu("Archivo")
-
-        load_pcap = file_menu.addAction("Cargar PCAP…")
-        load_pcap.triggered.connect(self.load_pcap)
-
-        file_menu.addSeparator()
-
-        exit_action = file_menu.addAction("Salir")
-        exit_action.triggered.connect(self.close)
-
-        # --- CAPTURE MENU ---
-        capture_menu = menu.addMenu("Captura")
-
-        start_action = capture_menu.addAction("Iniciar Captura")
-        start_action.triggered.connect(self.start_capture)
-
-        stop_action = capture_menu.addAction("Detener Captura")
-        stop_action.triggered.connect(self.stop_capture)
-
-    def _setup_layout(self):
-        central_widget = QWidget()
-        layout = QVBoxLayout(central_widget)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        # Panel izquierdo: lista de paquetes
         self.packet_list = PacketList()
-        self.packet_list.packet_selected.connect(self.show_packet_details)
-
-        # Panel derecho superior: detalles por capas
         self.packet_details = PacketDetails()
 
-        # Panel derecho inferior: hexdump
-        self.hex_viewer = HexViewer()
+        layout.addWidget(self.packet_list, 3)
+        layout.addWidget(self.packet_details, 2)
 
-        right_splitter = QSplitter(Qt.Orientation.Vertical)
-        right_splitter.addWidget(self.packet_details)
-        right_splitter.addWidget(self.hex_viewer)
-        right_splitter.setSizes([400, 300])
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-        splitter.addWidget(self.packet_list)
-        splitter.addWidget(right_splitter)
-        splitter.setSizes([400, 800])
+    # -------------------------------
+    #       MENÚ DE LA APLICACIÓN
+    # -------------------------------
+    def create_menu(self):
+        menu_bar = self.menuBar()
 
-        layout.addWidget(splitter)
-        self.setCentralWidget(central_widget)
+        # ---- Menú Captura ----
+        capture_menu = menu_bar.addMenu("Captura")
 
-    # ------------------------------------------
-    #  EVENTOS DE MENU
-    # ------------------------------------------
+        start_action = QAction("Iniciar captura", self)
+        start_action.triggered.connect(self.start_capture)
+        capture_menu.addAction(start_action)
 
-    def load_pcap(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Abrir archivo PCAP", "", "PCAP Files (*.pcap *.pcapng)"
-        )
-        if not path:
-            return
+        stop_action = QAction("Detener captura", self)
+        stop_action.triggered.connect(self.stop_capture)
+        capture_menu.addAction(stop_action)
 
-        # Aquí conectarás el lector de pcap real:
-        QMessageBox.information(self, "PCAP", f"PCAP cargado:\n{path}")
+        # ---- Menú Archivo ----
+        file_menu = menu_bar.addMenu("Archivo")
 
+        open_pcap_action = QAction("Abrir PCAP…", self)
+        open_pcap_action.triggered.connect(self.open_pcap)
+        file_menu.addAction(open_pcap_action)
+
+        exit_action = QAction("Salir", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # ---- Menú Vista ----
+        view_menu = menu_bar.addMenu("Vista")
+
+        stats_action = QAction("Ver estadísticas", self)
+        stats_action.triggered.connect(self.show_stats)
+        view_menu.addAction(stats_action)
+
+    # -------------------------------
+    #    FUNCIONES DE MENÚ (VACÍAS POR AHORA)
+    # -------------------------------
     def start_capture(self):
-        QMessageBox.information(self, "Captura", "Iniciando captura real…")
-        # Aquí se conectará live_capture.start()
+        QMessageBox.information(self, "Captura", "Iniciando captura (simulada por ahora).")
 
     def stop_capture(self):
-        QMessageBox.warning(self, "Captura", "Captura detenida.")
-        # Aquí se conectará live_capture.stop()
+        QMessageBox.information(self, "Captura", "Captura detenida.")
 
-    # ------------------------------------------
-    #  EVENTO: CUANDO SE SELECCIONA UN PAQUETE
-    # ------------------------------------------
+    def open_pcap(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Abrir archivo PCAP", "", "PCAP Files (*.pcap)")
+        if file_name:
+            QMessageBox.information(self, "PCAP", f"Abriste: {file_name}\n(El lector PCAP se añadirá después)")
 
-    def show_packet_details(self, packet):
-        """
-        packet = {
-            "summary": "...",
-            "layers": [
-                { "layer": "Ethernet", "fields": {...} },
-                { "layer": "IPv4", "fields": {...} },
-                ...
-            ],
-            "raw": b"\x00\x14..."
-        }
-        """
-        if not packet:
-            return
-
-        self.packet_details.display(packet["layers"])
-        self.hex_viewer.display(packet["raw"])
+    def show_stats(self):
+        QMessageBox.information(self, "Estadísticas", "Vista de estadísticas (por implementar).")
