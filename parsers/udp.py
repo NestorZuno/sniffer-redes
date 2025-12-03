@@ -21,3 +21,10 @@ class UDP:
             "Length": self.length,
             "Checksum": hex(self.checksum),
         }
+
+
+def parse_udp(raw_data):
+    """
+    Wrapper requerido por dispatcher.py
+    """
+    return UDP(raw_data).to_dict()

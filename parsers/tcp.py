@@ -19,11 +19,16 @@ class TCP:
          self.checksum,
          self.urg_ptr) = struct.unpack("!HHLLHHHH", raw_data[:20])
 
-        # Header length
+        # Header length → (offset en palabras de 32 bits) * 4
         self.offset = (offset_reserved_flags >> 12) * 4
 
-        # Flags
+        # Flags (9 bits)
         self.flags = offset_reserved_flags & 0x01FF
+
+        # -------------------------
+        # EXTRAER EL PAYLOAD TCP
+        # -------------------------
+        self.payload = raw_data[self.offset:]
 
     def to_dict(self):
         return {
@@ -36,4 +41,5 @@ class TCP:
             "Window Size": self.window,
             "Checksum": hex(self.checksum),
             "Urgent Pointer": self.urg_ptr,
+            "Payload Length": len(self.payload),
         }
