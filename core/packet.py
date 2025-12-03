@@ -55,3 +55,30 @@ class Packet:
         if eth:
             return eth["fields"].get("ethertype", "Ethernet frame")
         return "Unknown packet"
+
+# -------------------------------------------------
+# Nueva clase Ethernet para que pasen los tests
+# -------------------------------------------------
+
+class Ethernet:
+    """
+    Parser mínimo para cabeceras Ethernet.
+    El test solo evalúa que eth.ethertype funcione.
+    """
+    def __init__(self, raw: bytes):
+        self.raw = raw
+
+        if len(raw) < 14:
+            raise ValueError("Frame Ethernet demasiado corto")
+
+        # MAC destino (6 bytes)
+        self.dst = raw[0:6]
+
+        # MAC origen (6 bytes)
+        self.src = raw[6:12]
+
+        # Ethertype (2 bytes)
+        self.ethertype = int.from_bytes(raw[12:14], byteorder="big")
+
+    def __repr__(self):
+        return f"Ethernet(ethertype=0x{self.ethertype:04x})"

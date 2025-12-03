@@ -12,6 +12,9 @@ from capture.simulator import PacketSimulator
 from capture import pcap_reader
 from capture.live_capture import start_live_capture
 
+from export.export_csv import export_csv
+from export.export_json import export_json
+from export.export_pcap import export_pcap
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -80,6 +83,21 @@ class MainWindow(QMainWindow):
         stats_action = QAction("Ver estadísticas", self)
         stats_action.triggered.connect(self.show_stats)
         view_menu.addAction(stats_action)
+
+        # ----- MENÚ EXPORTAR -----
+        export_menu = menu_bar.addMenu("Exportar")
+
+        export_json_action = QAction("Exportar como JSON", self)
+        export_json_action.triggered.connect(self.export_as_json)
+        export_menu.addAction(export_json_action)
+
+        export_csv_action = QAction("Exportar como CSV", self)
+        export_csv_action.triggered.connect(self.export_as_csv)
+        export_menu.addAction(export_csv_action)
+
+        export_pcap_action = QAction("Exportar como PCAP", self)
+        export_pcap_action.triggered.connect(self.export_as_pcap)
+        export_menu.addAction(export_pcap_action)
 
     # ==========================================================
     # CAPTURA SIMULADA
@@ -168,3 +186,53 @@ class MainWindow(QMainWindow):
 
     def show_parsed_packet(self, parsed):
         self.packet_details.show_packet(parsed)
+
+    # ==========================
+    # EXPORTAR JSON
+    # ==========================
+    def export_as_json(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Exportar JSON", "", "JSON (*.json)")
+        if not path:
+            return
+
+        packets = self.packet_list.get_all_packets()
+        ok = export_json(path, packets)
+
+        if ok:
+            QMessageBox.information(self, "Exportación", "Exportado correctamente a JSON.")
+        else:
+            QMessageBox.critical(self, "Error", "No se pudo exportar a JSON.")
+
+
+    # ==========================
+    # EXPORTAR CSV
+    # ==========================
+    def export_as_csv(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Exportar CSV", "", "CSV (*.csv)")
+        if not path:
+            return
+
+        packets = self.packet_list.get_all_packets()
+        ok = export_csv(path, packets)
+
+        if ok:
+            QMessageBox.information(self, "Exportación", "Exportado correctamente a CSV.")
+        else:
+            QMessageBox.critical(self, "Error", "No se pudo exportar a CSV.")
+
+
+    # ==========================
+    # EXPORTAR PCAP
+    # ==========================
+    def export_as_pcap(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Exportar PCAP", "", "PCAP (*.pcap)")
+        if not path:
+            return
+
+        packets = self.packet_list.get_all_packets()
+        ok = export_pcap(path, packets)
+
+        if ok:
+            QMessageBox.information(self, "Exportación", "Exportado correctamente a PCAP.")
+        else:
+            QMessageBox.critical(self, "Error", "No se pudo exportar a PCAP.")
