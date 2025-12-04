@@ -266,14 +266,17 @@ def parse_packet(raw_bytes):
                 except Exception as e:
                         # Si falla (ej. paquete truncado), mostramos error
                         out["layers"].append({"layer": "DHCP", "fields": {"error": f"DHCP Parse Error: {e}"}})
-
             # 2. DNS (Puerto 53)
             elif (sport == 53 or dport == 53) and DNS:
                 try:
                     dns_data = l4_payload[8:]
                     dns_parsed = DNS(dns_data)
-                    out["layers"].append({"layer": "DNS", "fields": dns_parsed.to_dict()})
-                    out["summary"] = f"DNS Query/Response"
+                    d_dict = dns_parsed.to_dict() # Guardamos el dict
+                    out["layers"].append({"layer": "DNS", "fields": d_dict})
+                    
+                    # Resumen VIP:
+                    q_name = d_dict.get("Query Name", "Unknown")
+                    out["summary"] = f"DNS Query: {q_name}"
                 except:
                     pass
             
@@ -288,25 +291,21 @@ def parse_packet(raw_bytes):
         except:
             out["layers"].append({"layer":"UDP","fields":{"error":"UDP fail"}})
 
-    # ------------------ ICMP ------------------
+# ------------------ ICMPv4 ------------------
     if l4_proto == IPPROTO_ICMP and ICMP:
         try:
             ic = ICMP(l4_payload)
-            out["layers"].append({"layer":"ICMP","fields":ic.to_dict()})
-            out["summary"] = f"ICMP Type={ic.type} Code={ic.code}"
+            # Guardamos el diccionario primero para poder leer la 'Description'
+            ic_data = ic.to_dict()
+            
+            out["layers"].append({"layer": "ICMP", "fields": ic_data})
+            
+            # Usamos la descripción legible (ej. "Echo (ping) request")
+            # Si no existe el campo (por si no guardaste el otro archivo), usa el Type/Code
+            desc = ic_data.get("Description", f"Type={ic.type} Code={ic.code}")
+            
+            out["summary"] = f"ICMP {desc}"
         except:
             out["layers"].append({"layer":"ICMP","fields":{"error":"ICMP fail"}})
-
-    if l4_proto == IPPROTO_ICMPV6 and ICMPv6:
-        try:
-            ic = ICMPv6(l4_payload)
-            out["layers"].append({"layer":"ICMPv6","fields":ic.to_dict()})
-            out["summary"] = f"ICMPv6 Type={ic.type}"
-            if NDP and ic.type in (135, 136):
-                ndp = NDP(l4_payload)
-                out["layers"].append({"layer":"NDP","fields":ndp.to_dict()})
-                out["summary"] = f"NDP (IPv6 Neighbor Discovery)"
-        except:
-            out["layers"].append({"layer":"ICMPv6","fields":{"error":"ICMPv6 fail"}})
-
+            
     return out

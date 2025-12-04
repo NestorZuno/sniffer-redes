@@ -31,13 +31,35 @@ class TCP:
         self.payload = raw_data[self.offset:]
 
     def to_dict(self):
+        # Decodificar las banderas
+        # Banderas (9 bits): NS, CWR, ECE, URG, ACK, PSH, RST, SYN, FIN
+        flags_map = {
+            0x001: "FIN",
+            0x002: "SYN",
+            0x004: "RST",
+            0x008: "PSH",
+            0x010: "ACK",
+            0x020: "URG",
+            0x040: "ECE",
+            0x080: "CWR",
+            0x100: "NS"
+        }
+
+        active_flags = []
+        for bit, name in flags_map.items():
+            if self.flags & bit:
+                active_flags.append(name)
+        
+        flags_str = "[" + ", ".join(active_flags) + "]"
+
         return {
             "Source Port": self.src_port,
             "Destination Port": self.dst_port,
             "Sequence Number": self.seq,
             "Acknowledgment": self.ack,
             "Header Length": self.offset,
-            "Flags": bin(self.flags),
+            "Flags": flags_str,       # <--- Ahora es legible (ej. "[SYN, ACK]")
+            "Raw Flags": hex(self.flags),
             "Window Size": self.window,
             "Checksum": hex(self.checksum),
             "Urgent Pointer": self.urg_ptr,
