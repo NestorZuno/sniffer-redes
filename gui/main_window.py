@@ -22,6 +22,8 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Sniffer de Red - Proyecto Escolar")
         self.resize(1100, 650)
+        # ------ REAL ------
+        self.real_capture_active = False
 
         # ------ SIMULADOR ------
         self.simulator = PacketSimulator()
@@ -67,37 +69,41 @@ class MainWindow(QMainWindow):
         real_start.triggered.connect(self.start_real_capture)
         capture_menu.addAction(real_start)
 
+        real_stop = QAction("Detener captura REAL", self)
+        real_stop.triggered.connect(self.stop_real_capture)
+        capture_menu.addAction(real_stop)
+
         # ---- MENÚ ARCHIVO ----
-        file_menu = menu_bar.addMenu("Archivo")
+        #file_menu = menu_bar.addMenu("Archivo")
 
         open_pcap = QAction("Abrir archivo PCAP…", self)
         open_pcap.triggered.connect(self.open_pcap)
-        file_menu.addAction(open_pcap)
+        #file_menu.addAction(open_pcap)
 
         exit_action = QAction("Salir", self)
         exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        #file_menu.addAction(exit_action)
 
         # ---- MENÚ VISTA ----
-        view_menu = menu_bar.addMenu("Vista")
+        #view_menu = menu_bar.addMenu("Vista")
         stats_action = QAction("Ver estadísticas", self)
         stats_action.triggered.connect(self.show_stats)
-        view_menu.addAction(stats_action)
+        #view_menu.addAction(stats_action)
 
         # ----- MENÚ EXPORTAR -----
-        export_menu = menu_bar.addMenu("Exportar")
+        #export_menu = menu_bar.addMenu("Exportar")
 
         export_json_action = QAction("Exportar como JSON", self)
         export_json_action.triggered.connect(self.export_as_json)
-        export_menu.addAction(export_json_action)
+        #export_menu.addAction(export_json_action)
 
         export_csv_action = QAction("Exportar como CSV", self)
         export_csv_action.triggered.connect(self.export_as_csv)
-        export_menu.addAction(export_csv_action)
+        #export_menu.addAction(export_csv_action)
 
         export_pcap_action = QAction("Exportar como PCAP", self)
         export_pcap_action.triggered.connect(self.export_as_pcap)
-        export_menu.addAction(export_pcap_action)
+        #export_menu.addAction(export_pcap_action)
 
     # ==========================================================
     # CAPTURA SIMULADA
@@ -141,22 +147,35 @@ class MainWindow(QMainWindow):
     # CAPTURA REAL
     # ==========================================================
     def start_real_capture(self):
+        if self.real_capture_active:
+                QMessageBox.warning(self, "Aviso", "La captura real ya está en curso.")
+                return
+
         iface, ok = QInputDialog.getText(
             self,
             "Interfaz de red",
-            "Ingresa la interfaz (ejemplo: eth0, wlan0, en0):"
+            "Ingresa la interfaz (ejemplo: eth0, Wi-Fi, o \\Device\\NPF_...):"
         )
 
         if not ok or not iface.strip():
             return
 
+        # Activamos la bandera
+        self.real_capture_active = True
+
         def on_real_packet(parsed):
-            self.packet_list.add_parsed_packet(parsed)
+            # Solo añadir si seguimos activos
+            if self.real_capture_active:
+                self.packet_list.add_parsed_packet(parsed)
+
+        # Esta función lambda le dirá a scapy cuándo detenerse
+        # Scapy se detendrá cuando 'stop_check' devuelva True
+        stop_check = lambda: not self.real_capture_active
 
         # Lanzar scapy sniff en thread
         t = threading.Thread(
             target=start_live_capture,
-            args=(iface.strip(), on_real_packet)
+            args=(iface.strip(), on_real_packet, stop_check)
         )
         t.daemon = True
         t.start()
@@ -164,8 +183,17 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             "Captura real",
-            f"Captura REAL iniciada en {iface}.\nAsegúrate de tener permisos de administrador."
+            f"Captura REAL iniciada en {iface}.\nPara detener, usa el menú Captura -> Detener captura REAL."
         )
+
+    def stop_real_capture(self):
+        if not self.real_capture_active:
+            QMessageBox.information(self, "Aviso", "No hay ninguna captura real en curso.")
+            return
+            
+        # Bajamos la bandera. Scapy lo detectará en el siguiente paquete y se detendrá.
+        self.real_capture_active = False
+        QMessageBox.information(self, "Captura Real", "Deteniendo captura... (Se detendrá al recibir el siguiente paquete o finalizar el timeout)")
 
     # ==========================================================
     # LECTURA DE PCAP
