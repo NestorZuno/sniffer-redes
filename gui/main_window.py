@@ -111,14 +111,26 @@ class MainWindow(QMainWindow):
         pkt = self.simulator.generate_packet()
 
         parsed = {
+            "timestamp": pkt["time"],
+            "src": pkt["src"],
+            "dst": pkt["dst"],
+            "proto": pkt["proto"],
+            "summary": pkt.get("info", ""),
+
+            # Para mostrar capas en PacketDetails
             "layers": [
                 {"layer": "Simulated", "fields": pkt}
             ],
+
+            # Simulador no usa bytes reales → raw vacío
             "raw": b"",
-            "summary": pkt.get("info", "")
+
+            # Tamaño reportado por el simulador
+            "length": pkt["size"]
         }
 
         self.packet_list.add_parsed_packet(parsed)
+
 
     def stop_capture(self):
         self.simulator.stop()

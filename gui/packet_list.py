@@ -13,29 +13,65 @@ class PacketList(QTableWidget):
         self.cellClicked.connect(self.row_clicked)
 
     def add_parsed_packet(self, parsed):
-        """
-        parsed -> dict returned by core.dispatcher.parse_packet
-        """
         row = self.rowCount()
         self.insertRow(row)
 
         num = row + 1
-        ts = parsed.get("_pcap_ts", "")
-        # find L3 and L4
+
+        # ===============================
+        # TIMESTAMP
+        # ===============================
+        ts = parsed.get("_pcap_ts") or parsed.get("timestamp") or ""
+
+        # ===============================
+        # L3 & L4 SEARCH
+        # ===============================
         l3 = next((l for l in parsed["layers"] if l["layer"] in ("IPv4","IPv6")), None)
-        l4 = next((l for l in parsed["layers"] if l["layer"] in ("TCP","UDP")), None)
-        src = l3["fields"].get("src","") if l3 else parsed["layers"][0]["fields"].get("src_mac","")
-        dst = l3["fields"].get("dst","") if l3 else parsed["layers"][0]["fields"].get("dst_mac","")
-        proto = l4["layer"] if l4 else parsed["layers"][-1]["layer"]
-        length = len(parsed.get("raw", b""))
-        summary = parsed.get("summary","")
+        l4 = next((l for l in parsed["layers"] if l["layer"] in ("TCP","UDP","ICMP")), None)
+
+        # ===============================
+        # SOURCE / DESTINATION
+        # ===============================
+        if l3:
+            src = l3["fields"].get("src", "")
+            dst = l3["fields"].get("dst", "")
+        else:
+            # SIMULATED PACKET
+            fields = parsed["layers"][0]["fields"]
+            src = fields.get("src", "")
+            dst = fields.get("dst", "")
+
+        # ===============================
+        # PROTOCOL
+        # ===============================
+        if l4:
+            proto = l4["layer"]
+        else:
+            proto = parsed.get("proto") or parsed["layers"][-1]["layer"]
+
+        # ===============================
+        # LENGTH
+        # ===============================
+        raw_bytes = parsed.get("raw", b"")
+
+        # Si raw tiene bytes reales (PCAP o captura real)
+        if raw_bytes:
+            length = len(raw_bytes)
+        # Si es un paquete simulado, usar el campo 'size'
+        else:
+            length = parsed["layers"][0]["fields"].get("size", 0)
+
+
+        # ===============================
+        # SUMMARY
+        # ===============================
+        summary = parsed.get("summary", "")
 
         cells = [num, ts, src, dst, proto, length, summary]
         for col, val in enumerate(cells):
-            item = QTableWidgetItem(str(val))
-            self.setItem(row, col, item)
+            self.setItem(row, col, QTableWidgetItem(str(val)))
 
-        # store full parsed dict in row for later retrieval
+        # store parsed packet
         self.item(row,0).setData(Qt.ItemDataRole.UserRole, parsed)
 
     def row_clicked(self, row, col):
